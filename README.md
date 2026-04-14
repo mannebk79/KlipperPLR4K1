@@ -42,25 +42,21 @@ Dieser Fork des BigTreeTech KlipperPLR-Systems wurde speziell für die **Crealit
      SAVE_VARIABLE VARIABLE=was_interrupted VALUE=True
      {% set plr_filename = printer.virtual_sdcard.file_path.split('/')[-1] %}
      SAVE_VARIABLE VARIABLE=last_file VALUE='"{plr_filename}"'
-     ```
      
 - Füge folgende Zeilen zu deinem END_PRINT Macro hinzu:
 
-Damit der Drucker nach einem erfolgreichen Druck diese Variablen schließt, muss der Status zurückgesetzt werden. Füge dies zu deinem END_PRINT Makro hinzu:
+   Damit der Drucker nach einem erfolgreichen Druck diese Variablen schließt, muss der Status zurückgesetzt werden. Füge dies zu deinem END_PRINT Makro hinzu:
 
-      ```gcode
+     ```gcode
       # Deaktivieren des PowerLossRecovery Status
       SAVE_VARIABLE VARIABLE=was_interrupted VALUE=False
       G31 # Löscht temporäre PLR-Dateien
-      ```
-
 
 2. Slicer-Einstellungen
 
 - Damit der Drucker die Position speichert, muss im Slicer (Orca, Creality Print etc.) unter "G-Code vor Schichtwechsel" (Before Layer Change G-Code) folgendes stehen:
 
     ```gcode
-
     LOG_Z
     ```
 
