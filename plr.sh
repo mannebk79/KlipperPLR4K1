@@ -1,51 +1,45 @@
-#!/bin/bash
-#SD_PATH=~/gcode_files
-#cat ${2} > /tmp/plrtmpA.$$
-mkdir -p {USER_HOME}/printer_data/gcodes/plr/
-filepath=$(sed -n "s/.*filepath *= *'\([^']*\)'.*/\1/p" {USER_HOME}/printer_data/config/variables.cfg)
-filepath=$(printf "$filepath")
-echo "$filepath"
-#SD_PATH=$(dirname "$filepath")
-last_file=$(sed -n "s/.*last_file *= *'\([^']*\)'.*/\1/p" {USER_HOME}/printer_data/config/variables.cfg)
-last_file=$(printf "$last_file")
-echo "$last_file"
-plr=$last_file
-echo "plr=$plr" 
-PLR_PATH={USER_HOME}/printer_data/gcodes/plr/
-#echo "$SD_PATH"
-#SD_PATH=~/gcode_files
-#cat ${SD_PATH}/${2} > {USER_HOME}/plrtmpA.$$
-cat "${filepath}" > {USER_HOME}/plrtmpA.$$
-cat {USER_HOME}/plrtmpA.$$ | sed -e '1,/Z'${1}'/ d' | sed -ne '/ Z/,$ p' | grep -m 1 ' Z' | sed -ne 's/.* Z\([^ ]*\).*/SET_KINEMATIC_POSITION Z=\1/p' > ${PLR_PATH}/"${plr}"
-#echo 'START_TEMPS' >> ${SD_PATH}/plr.gcode
-echo 'M118 START_TEMPS...' >> ${PLR_PATH}/"${plr}"
-cat {USER_HOME}/plrtmpA.$$ | sed '/ Z'${1}'/q' | sed -ne '/\(M104\|M140\|M109\|M190\|M106\)/p' >> ${PLR_PATH}/"${plr}"
-cat {USER_HOME}/plrtmpA.$$ | sed -ne '/;End of Gcode/,$ p' | tr '\n' ' ' | sed -ne 's/ ;[^ ]* //gp' | sed -ne 's/\\\\n/;/gp' | tr ';' '\n' | grep material_bed_temperature | sed -ne 's/.* = /M140 S/p' | head -1 >> ${PLR_PATH}/"${plr}"
-cat {USER_HOME}/plrtmpA.$$ | sed -ne '/;End of Gcode/,$ p' | tr '\n' ' ' | sed -ne 's/ ;[^ ]* //gp' | sed -ne 's/\\\\n/;/gp' | tr ';' '\n' | grep material_print_temperature | sed -ne 's/.* = /M104 S/p' | head -1 >> ${PLR_PATH}/"${plr}"
-cat {USER_HOME}/plrtmpA.$$ | sed -ne '/;End of Gcode/,$ p' | tr '\n' ' ' | sed -ne 's/ ;[^ ]* //gp' | sed -ne 's/\\\\n/;/gp' | tr ';' '\n' | grep material_bed_temperature | sed -ne 's/.* = /M190 S/p' | head -1 >> ${PLR_PATH}/"${plr}"
-cat {USER_HOME}/plrtmpA.$$ | sed -ne '/;End of Gcode/,$ p' | tr '\n' ' ' | sed -ne 's/ ;[^ ]* //gp' | sed -ne 's/\\\\n/;/gp' | tr ';' '\n' | grep material_print_temperature | sed -ne 's/.* = /M109 S/p' | head -1 >> ${PLR_PATH}/"${plr}"
-# cat /tmp/plrtmpA.$$ | sed -e '1,/ Z'${1}'[^0-9]*$/ d' | sed -e '/ Z/q' | tac | grep -m 1 ' E' | sed -ne 's/.* E\([^ ]*\)/G92 E\1/p' >> ${SD_PATH}/plr.gcode
-#tac /tmp/plrtmpA.$$ | sed -e '/ Z'${1}'[^0-9]*$/q' | tac | tail -n+2 | sed -e '/ Z[0-9]/ q' | tac | sed -e '/ E[0-9]/ q' | sed -ne 's/.* E\([^ ]*\)/G92 E\1/p' >> ${SD_PATH}/plr.gcode
-BG_EX=`tac {USER_HOME}/plrtmpA.$$ | sed -e '/ Z'${1}'[^0-9]*$/q' | tac | tail -n+2 | sed -e '/ Z[0-9]/ q' | tac | sed -e '/ E[0-9]/ q' | sed -ne 's/.* E\([^ ]*\)/G92 E\1/p'`
-# If we failed to match an extrusion command (allowing us to correctly set the E axis) prior to the matched layer height, then simply set the E axis to the first E value present in the resemued gcode.  This avoids extruding a huge blod on resume, and/or max extrusion errors.
-if [ "${BG_EX}" = "" ]; then
- BG_EX=`tac {USER_HOME}/plrtmpA.$$ | sed -e '/ Z'${1}'[^0-9]*$/q' | tac | tail -n+2 | sed -ne '/ Z/,$ p' | sed -e '/ E[0-9]/ q' | sed -ne 's/.* E\([^ ]*\)/G92 E\1/p'`
+#!/bin/sh
+# K1/K1C optimized PLR Script
+
+GCODE_DIR="/usr/data/printer_data/gcodes"
+PLR_DIR="$GCODE_DIR/plr"
+Z_HEIGHT=$1
+FILE_NAME=$2
+
+FULL_PATH="$GCODE_DIR/$FILE_NAME"
+TARGET_PATH="$PLR_DIR/$FILE_NAME"
+mkdir -p "$(dirname "$TARGET_PATH")"
+
+# Extrahierung der Temperaturen aus START_PRINT oder M104/M140
+EXTRUDER_TEMP=$(grep "START_PRINT" "$FULL_PATH" | sed -n 's/.*EXTRUDER_TEMP=\([0-9]*\).*/\1/p' | head -n 1)
+BED_TEMP=$(grep "START_PRINT" "$FULL_PATH" | sed -n 's/.*BED_TEMP=\([0-9]*\).*/\1/p' | head -n 1)
+
+# Fallback Suche
+if [ -z "$EXTRUDER_TEMP" ] || [ "$EXTRUDER_TEMP" = "0" ]; then
+    EXTRUDER_TEMP=$(grep "M10 S" "$FULL_PATH" | grep -v "S0" | sed -n 's/.*S\([0-9]*\).*/\1/p' | head -n 1)
 fi
-M83=$(cat {USER_HOME}/plrtmpA.$$ | sed '/ Z'${1}'/q' | sed -ne '/\(M83\)/p')
-if [ -n "${M83}" ];then
- echo 'G92 E0' >> ${PLR_PATH}/"${plr}"
- echo ${M83} >> ${PLR_PATH}/"${plr}"
-else
- echo ${BG_EX} >> ${PLR_PATH}/"${plr}"
+if [ -z "$BED_TEMP" ] || [ "$BED_TEMP" = "0" ]; then
+    BED_TEMP=$(grep "M14 S" "$FULL_PATH" | grep -v "S0" | sed -n 's/.*S\([0-9]*\).*/\1/p' | head -n 1)
 fi
-echo 'G91' >> ${PLR_PATH}/"${plr}"
-echo 'G1 Z10' >> ${PLR_PATH}/"${plr}"
-echo 'G90' >> ${PLR_PATH}/"${plr}"
-echo 'G28 X Y' >> ${PLR_PATH}/"${plr}"
-echo 'G91' >> ${PLR_PATH}/"${plr}"
-echo 'G1 Z-5' >> ${PLR_PATH}/"${plr}"
-echo 'G90' >> ${PLR_PATH}/"${plr}"
-echo 'M106 S204' >> ${PLR_PATH}/"${plr}"
-# cat /tmp/plrtmpA.$$ | sed -e '1,/Z'${1}'/ d' | sed -ne '/ Z/,$ p' >> ${SD_PATH}/plr.gcode
-tac {USER_HOME}/plrtmpA.$$ | sed -e '/ Z'${1}'[^0-9]*$/q' | tac | tail -n+2 | sed -ne '/ Z/,$ p' >> ${PLR_PATH}/"${plr}"
-rm {USER_HOME}/plrtmpA.$$
+
+# Fallback Standards
+[ -z "$BED_TEMP" ] || [ "$BED_TEMP" = "0" ] && BED_TEMP=65
+[ -z "$EXTRUDER_TEMP" ] || [ "$EXTRUDER_TEMP" = "0" ] && EXTRUDER_TEMP=250
+
+SAFE_Z=$(echo "$Z_HEIGHT + 5" | bc)
+
+# Header-Erstellung
+echo "; PLR RECOVERY START FOR K1 SERIES" > "$TARGET_PATH"
+grep "EXCLUDE_OBJECT_DEFINE" "$FULL_PATH" >> "$TARGET_PATH"
+echo "M140 S$BED_TEMP" >> "$TARGET_PATH"
+echo "SET_KINEMATIC_POSITION Z=$Z_HEIGHT" >> "$TARGET_PATH"
+echo "G90" >> "$TARGET_PATH"
+echo "G1 Z$SAFE_Z F600" >> "$TARGET_PATH"
+echo "G28 X Y" >> "$TARGET_PATH"
+echo "M190 S$BED_TEMP" >> "$TARGET_PATH"
+echo "M109 S$EXTRUDER_TEMP" >> "$TARGET_PATH"
+echo "M83" >> "$TARGET_PATH"
+echo "G1 Z$Z_HEIGHT F600" >> "$TARGET_PATH"
+
+# Daten-Schnitt (Vorwärts-Suche für Geschwindigkeit auf dem K1)
+sed -n "/G1.*Z$Z_HEIGHT/,\$p" "$FULL_PATH" >> "$TARGET_PATH"
