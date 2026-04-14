@@ -1,41 +1,31 @@
-#!/bin/bash
+#!/bin/sh
+# K1/K1C optimized Uninstallation Script for KlipperPLR
 
-# Get the path & user from env
-if [ -n "$SUDO_USER" ]; then
-    echo "shell script execute by with sudo :  user is $SUDO_USER"
-    if [ "$SUDO_USER" = "runner" ]; then
-        USER_HOME="/home/pi"
-    else
-        USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
-    fi
-else
-    USER_HOME=$(getent passwd "$USER" | cut -d: -f6)
-    echo "shell script execute without sudo : user is $USER"
-fi
+PRINTER_DATA_DIR="/usr/data/printer_data"
+KLIPPER_DIR="/usr/share/klipper"
+CONFIG_DIR="$PRINTER_DATA_DIR/config"
+PLR_BIN_DIR="$PRINTER_DATA_DIR/plr"
 
-echo "User's home directory: $USER_HOME"
+echo "Starte Deinstallation von KlipperPLR..."
 
-# Remove include plr.cfg in printer.cfg
-sed -i '/\[include plr.cfg\]/d' $USER_HOME/printer_data/config/printer.cfg
-if [ -f "$USER_HOME/printer_data/config/plr.cfg" ]; then
-    rm "$USER_HOME/printer_data/config/plr.cfg"
-fi
+# 1. Shell-Erweiterung entfernen
+echo "Entferne gcode_shell_command..."
+rm -f "$KLIPPER_DIR/klippy/extras/gcode_shell_command.py"
 
-# Remove include update_plr.cfg in moonraker.conf
-sed -i '/\[include update_plr.cfg\]/d' $USER_HOME/printer_data/config/moonraker.conf
-if [ -f "$USER_HOME/printer_data/config/update_plr.cfg" ]; then
-    rm "$USER_HOME/printer_data/config/update_plr.cfg"
-fi
+# 2. Skripte und temporäre Dateien entfernen
+echo "Lösche PLR-Verzeichnisse..."
+rm -rf "$PLR_BIN_DIR"
+rm -rf "$PRINTER_DATA_DIR/gcodes/plr"
 
-if [ -d "$USER_HOME/printer_data/plr" ]; then
-    rm -r "$USER_HOME/printer_data/plr"
-fi
+# 3. Konfigurationsdatei entfernen
+echo "Entferne plr.cfg..."
+rm -f "$CONFIG_DIR/plr.cfg"
 
-if [ -d "$USER_HOME/printer_data/gcodes/plr/" ]; then
-    rm -r "$USER_HOME/printer_data/gcodes/plr/"
-fi
-
-# Print a message to the user
-echo "Uninstallation complete"
-
-#end of script
+echo "-------------------------------------------------------"
+echo "Deinstallation abgeschlossen!"
+echo "WICHTIG: Bitte entferne folgende Zeilen manuell aus deiner printer.cfg:"
+echo "1. [include plr.cfg]"
+echo "2. Den [save_variables] Block"
+echo ""
+echo "Danach Klipper neustarten: /etc/init.d/S55klipper_service restart"
+echo "-------------------------------------------------------"
