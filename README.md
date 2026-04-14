@@ -15,7 +15,7 @@ Dieser Fork des BigTreeTech KlipperPLR-Systems wurde speziell für die **Crealit
 2. Klone das Repository in deinen Config-Ordner:
    ```bash
     cd /usr/data/printer_data/config
-    git clone https://github.com PLR
+    git clone https://github.com/mannebk79/KlipperPLR4K1 PLR
     cd PLR
     chmod +x install.sh
     ./install.sh
