@@ -33,6 +33,27 @@ Dieser Fork des BigTreeTech KlipperPLR-Systems wurde speziell für die **Crealit
     [save_variables]
     filename: /usr/data/printer_data/config/variables.cfg
     ```
+- Füge folgende Zeilen zu deinem START_PRINT Macro hinzu:
+  
+  Damit der Drucker beim Start eines jeden Auftrags die Daten dieses Drucks, e.g. den Dateinamen und den Status, speichert, musst du dein `START_PRINT` Makro (meist in der `gcode_macro.cfg` oder `printer.cfg`) um diese Zeilen ergänzen. Füge sie am besten am Ende des Makros ein, kurz bevor der eigentliche Druck (bei Creality mit der Testlienie links durch den Befehl `CX_PRINT_DRAW_ONE_LINE`) startet:
+
+     ```gcode
+     # Aktivieren des PowerLossResume, für die Funktion muss LOG_Z im Slicer bei vor Schichtwechsel Gcode drin stehen
+     SAVE_VARIABLE VARIABLE=was_interrupted VALUE=True
+     {% set plr_filename = printer.virtual_sdcard.file_path.split('/')[-1] %}
+     SAVE_VARIABLE VARIABLE=last_file VALUE='"{plr_filename}"'
+     ```
+     
+- Füge folgende Zeilen zu deinem END_PRINT Macro hinzu:
+
+Damit der Drucker nach einem erfolgreichen Druck diese Variablen schließt, muss der Status zurückgesetzt werden. Füge dies zu deinem END_PRINT Makro hinzu:
+
+      ```gcode
+      # Deaktivieren des PowerLossRecovery Status
+      SAVE_VARIABLE VARIABLE=was_interrupted VALUE=False
+      G31 # Löscht temporäre PLR-Dateien
+      ```
+
 
 2. Slicer-Einstellungen
 
