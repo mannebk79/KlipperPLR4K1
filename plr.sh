@@ -41,5 +41,6 @@ echo "M109 S$EXTRUDER_TEMP" >> "$TARGET_PATH"
 echo "M83" >> "$TARGET_PATH"
 echo "G1 Z$Z_HEIGHT F600" >> "$TARGET_PATH"
 
-# Daten-Schnitt (Vorwärts-Suche für Geschwindigkeit auf dem K1)
-sed -n "/G1.*Z$Z_HEIGHT/,\$p" "$FULL_PATH" >> "$TARGET_PATH"
+# Daten-Schnitt mit maskiertem Punkt für Z-Höhe
+Z_SEARCH=$(echo $Z_HEIGHT | sed 's/\./[.]/')
+sed -n "/G1.*Z$Z_SEARCH/,\$p" "$FULL_PATH" >> "$TARGET_PATH"
