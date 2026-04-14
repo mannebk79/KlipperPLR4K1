@@ -1,6 +1,8 @@
 # Klipper Power Loss Recovery (PLR) - Creality K1 Edition
 
-Dieser Fork des BigTreeTech KlipperPLR-Systems wurde speziell für die **Creality K1-Serie (K1, K1 Max, K1C)** optimiert. Er behebt Pfadprobleme, Inkompatibilitäten mit der BusyBox-Umgebung und verbessert die Performance auf dem K1-SoC.
+Dieser Fork des BigTreeTech KlipperPLR-Systems https://github.com/bigtreetech/KlipperPLR wurde speziell für die **Creality K1-Serie (K1, K1 Max, K1C)** optimiert. Er behebt Pfadprobleme, Inkompatibilitäten mit der BusyBox-Umgebung und verbessert die Performance auf dem K1-SoC.
+
+Dank geht auch an den ursprünglichen Creator Yumi-Lab: https://github.com/Yumi-Lab/YUMI_PLR
 
 ## Features
 - **K1-Native Pfade:** Voll kompatibel mit `/usr/data/printer_data`.
